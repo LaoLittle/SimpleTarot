@@ -17,6 +17,7 @@ import net.mamoe.mirai.utils.info
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.jetbrains.exposed.sql.transactions.transaction
+import org.laolittle.plugin.TarotData.tarot
 import java.io.File
 import java.sql.Connection
 import java.time.LocalDate
@@ -49,8 +50,10 @@ object SimpleTarot : KotlinPlugin(
                         if ((0..1).random() == 0) "正位\n${tarot.positive}" else "逆位\n${tarot.negative}"
                     ).deserializeMiraiCode()
             }
-            val img: suspend (TarotData.Tarot, Contact) -> Image = { tarot, contact ->
-                path.resolve(tarot.imageName).uploadAsImage(contact)
+            val img: suspend (TarotData.Tarot, Contact) -> Image? = { tarot, contact ->
+                if (path.resolve(tarot.imageName).exists())
+                    path.resolve(tarot.imageName).uploadAsImage(contact)
+                else null
             }
             finding(Regex("^(?:(.+)张|)塔罗牌")) {
                 val sql: SqlExpressionBuilder.() -> Op<Boolean> = { userDB.id eq sender.id }
@@ -91,16 +94,16 @@ object SimpleTarot : KotlinPlugin(
                 }
                 if (tarotNum in 1..10) {
                     if (tarotNum == 1) {
-                        val card = TarotData.tarot.random()
+                        val card = tarot.random()
                         subject.sendMessage(msg(card, sender))
                         delay(TarotConfig.interval)
-                        subject.sendMessage(img(card, subject))
+                        img(card, subject)?.let { img -> subject.sendMessage(img) }
                     } else {
                         val tarots = getRandomTarots(tarotNum)
                         val forward = buildForwardMessage {
                             tarots.forEach { tarot ->
                                 add(sender, msg(tarot, sender))
-                                add(sender, img(tarot, subject))
+                                img(tarot, subject)?.let { img -> add(sender, img) }
                             }
                         }
                         subject.sendMessage(forward)
@@ -132,10 +135,10 @@ object SimpleTarot : KotlinPlugin(
                             info[date] = dayOfYear
                         }
                     }
-                    val card = TarotData.tarot.random()
+                    val card = tarot.random()
                     subject.sendMessage(msg(card, sender))
                     delay(TarotConfig.interval)
-                    subject.sendMessage(img(card, subject))
+                    img(card, subject)?.let { img -> subject.sendMessage(img) }
                     subject.sendMessage("获得$random 张塔罗牌")
                 }
             }
@@ -148,10 +151,10 @@ object SimpleTarot : KotlinPlugin(
 
     private fun getRandomTarots(tarotNum: Int): Collection<TarotData.Tarot> {
         val tarots = if (TarotConfig.repeatable) arrayListOf() else mutableSetOf<TarotData.Tarot>()
-            while (tarots.size < tarotNum) {
-                tarots.add(TarotData.tarot.random())
-                if (tarots.size == TarotData.tarot.size) break
-            }
+        while (tarots.size < tarotNum) {
+            tarots.add(tarot.random())
+            if (tarots.size == tarot.size) break
+        }
         return tarots
     }
 
