@@ -15,5 +15,5 @@ object TarotConfig : AutoSavePluginConfig("Config") {
     val format by value("%目标%\n%牌名%\n%描述%")
 
     @ValueDescription("连抽可重复")
-    val repeatable by value(false)
+    val repeatable by value(true)
 }

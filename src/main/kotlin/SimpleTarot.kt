@@ -22,11 +22,11 @@ import java.sql.Connection
 import java.time.LocalDate
 import javax.sql.DataSource
 
-object Tarot : KotlinPlugin(
+object SimpleTarot : KotlinPlugin(
     JvmPluginDescription(
         id = "org.laolittle.plugin.Tarot",
         name = "Tarot",
-        version = "1.0-SNAPSHOT",
+        version = "1.0.1",
     ) {
         author("LaoLittle")
     }
@@ -158,7 +158,7 @@ object Tarot : KotlinPlugin(
     }
 
     init {
-        dataSource.url = "jdbc:sqlite:${Tarot.dataFolder}/${TarotConfig.database}"
+        dataSource.url = "jdbc:sqlite:${SimpleTarot.dataFolder}/${TarotConfig.database}"
         dataSource.driverClassName = "org.sqlite.JDBC"
         db = org.jetbrains.exposed.sql.Database.connect(dataSource as DataSource)
         TransactionManager.manager.defaultIsolationLevel =
