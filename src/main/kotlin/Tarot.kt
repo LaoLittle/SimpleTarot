@@ -5,6 +5,7 @@ import net.mamoe.mirai.console.plugin.jvm.JvmPluginDescription
 import net.mamoe.mirai.console.plugin.jvm.KotlinPlugin
 import net.mamoe.mirai.event.GlobalEventChannel
 import net.mamoe.mirai.event.subscribeGroupMessages
+import net.mamoe.mirai.message.code.MiraiCode.deserializeMiraiCode
 import net.mamoe.mirai.message.data.*
 import net.mamoe.mirai.utils.ExternalResource.Companion.uploadAsImage
 import net.mamoe.mirai.utils.info
@@ -20,6 +21,7 @@ object Tarot : KotlinPlugin(
 ) {
 
     override fun onEnable() {
+       TarotConfig.reload()
         TarotData.reload()
         logger.info { "Plugin loaded" }
 
@@ -40,15 +42,10 @@ object Tarot : KotlinPlugin(
                 }
                 if (tarotNum in 1..10) {
                     val msg: (TarotData.Tarot) -> Message = { tarot ->
-                        At(sender).plus(
-                            PlainText(
-                                "\n" +
-                                        """
-                            ${tarot.name}
-                            ${if ((0..1).random() == 0) "正位\n${tarot.positive}" else "逆位\n${tarot.negative}"}
-                        """.trimIndent()
-                            )
-                        )
+                        TarotConfig.format.replace("%目标%", "[mirai:at:${sender.id}]")
+                            .replace("%牌名%", tarot.name).replace("%描述%",
+                                if ((0..1).random() == 0) "正位\n${tarot.positive}" else "逆位\n${tarot.negative}"
+                            ).deserializeMiraiCode()
                     }
                     val img: suspend (TarotData.Tarot) -> Image = { tarot ->
                         dataFolder.resolve(tarot.imageName).uploadAsImage(subject)
@@ -56,7 +53,7 @@ object Tarot : KotlinPlugin(
                     if (tarotNum == 1) {
                         val card = TarotData.tarot.random()
                         subject.sendMessage(msg(card))
-                        delay(500)
+                        delay(TarotConfig.interval)
                         subject.sendMessage(img(card))
                     } else {
                         val tarots = mutableSetOf<TarotData.Tarot>()
@@ -72,6 +69,8 @@ object Tarot : KotlinPlugin(
                         }
                         subject.sendMessage(forward)
                     }
+                }else {
+                    subject.sendMessage("次数请限制在一到十内！")
                 }
             }
         }
