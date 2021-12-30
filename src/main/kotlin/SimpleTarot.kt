@@ -76,6 +76,8 @@ object SimpleTarot : KotlinPlugin(
                         } else {
                         if (cards == 0) subject.sendMessage("你没有抽数了")
                         else subject.sendMessage("你只有${cardRow[userDB.card]}张")
+                        if (cardRow[userDB.date] == LocalDate.now().dayOfYear)
+                            subject.sendMessage("你的今日塔罗貌似没有抽取呢，请发送\"今日塔罗\"来获取塔罗牌次数")
                         return@suspendTransaction false
                     }
                     true
@@ -144,16 +146,12 @@ object SimpleTarot : KotlinPlugin(
 
     }
 
-    private fun getRandomTarots(tarotNum: Int): Set<TarotData.Tarot> {
-        val tarots = mutableSetOf<TarotData.Tarot>()
-        if (TarotConfig.repeatable) while (tarots.size < tarotNum) {
-            tarots.add(TarotData.tarot.random())
-            if (tarots.size == TarotData.tarot.size) break
-        } else {
-            repeat(tarotNum) {
+    private fun getRandomTarots(tarotNum: Int): Collection<TarotData.Tarot> {
+        val tarots = if (TarotConfig.repeatable) arrayListOf() else mutableSetOf<TarotData.Tarot>()
+            while (tarots.size < tarotNum) {
                 tarots.add(TarotData.tarot.random())
+                if (tarots.size == TarotData.tarot.size) break
             }
-        }
         return tarots
     }
 
