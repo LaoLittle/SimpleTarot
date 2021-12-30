@@ -8,7 +8,7 @@ import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransacti
 object Database {
 
 
-    object User: Table(){
+    object User : Table() {
         val id = long("id").uniqueIndex()
         val card = integer("cards")
         val date = integer("date")
