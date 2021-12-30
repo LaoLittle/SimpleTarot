@@ -24,7 +24,7 @@ object Tarot : KotlinPlugin(
         logger.info { "Plugin loaded" }
 
         GlobalEventChannel.subscribeGroupMessages {
-            finding(Regex("^(?:(.*)张|)塔罗牌")) {
+            finding(Regex("^(?:(.+)张|)塔罗牌")) {
                 val tarotNum = when (val value = it.groups[1]?.value) {
                     "一", "壹", "单", null -> 1
                     "二", "贰", "两" -> 2
@@ -45,7 +45,7 @@ object Tarot : KotlinPlugin(
                                 "\n" +
                                         """
                             ${tarot.name}
-                            ${if ((0..1).random() == 0) "正位\n${tarot.positive}" else tarot.negative}
+                            ${if ((0..1).random() == 0) "正位\n${tarot.positive}" else "逆位\n${tarot.negative}"}
                         """.trimIndent()
                             )
                         )
@@ -60,10 +60,14 @@ object Tarot : KotlinPlugin(
                         subject.sendMessage(img(card))
                     } else {
                         val tarots = mutableSetOf<TarotData.Tarot>()
-                        while (tarots.size < tarotNum) tarots.add(TarotData.tarot.random())
+                        while (tarots.size < tarotNum) {
+                            tarots.add(TarotData.tarot.random())
+                            if (tarots.size == TarotData.tarot.size) break
+                        }
                         val forward = buildForwardMessage {
                             tarots.forEach { tarot ->
                                 add(sender, msg(tarot))
+                                add(sender, img(tarot))
                             }
                         }
                         subject.sendMessage(forward)
