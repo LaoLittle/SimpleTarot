@@ -13,5 +13,5 @@ object TarotData : AutoSavePluginData("TarotData") {
         val imageName: String
     )
 
-    val tarot by value(setOf(Tarot("塔罗牌名", "正位", "逆位", "图片名称")))
+    val tarot by value(arrayOf(Tarot("塔罗牌名", "正位", "逆位", "图片名称")))
 }
