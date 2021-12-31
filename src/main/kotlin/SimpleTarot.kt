@@ -4,13 +4,9 @@ import com.alibaba.druid.pool.DruidDataSource
 import kotlinx.coroutines.delay
 import net.mamoe.mirai.console.plugin.jvm.JvmPluginDescription
 import net.mamoe.mirai.console.plugin.jvm.KotlinPlugin
-import net.mamoe.mirai.contact.Contact
-import net.mamoe.mirai.contact.User
+import net.mamoe.mirai.contact.Contact.Companion.sendImage
 import net.mamoe.mirai.event.GlobalEventChannel
 import net.mamoe.mirai.event.subscribeGroupMessages
-import net.mamoe.mirai.message.code.MiraiCode.deserializeMiraiCode
-import net.mamoe.mirai.message.data.Image
-import net.mamoe.mirai.message.data.Message
 import net.mamoe.mirai.message.data.buildForwardMessage
 import net.mamoe.mirai.utils.ExternalResource.Companion.uploadAsImage
 import net.mamoe.mirai.utils.info
@@ -18,7 +14,6 @@ import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.laolittle.plugin.TarotData.tarot
-import java.io.File
 import java.sql.Connection
 import java.time.LocalDate
 import javax.sql.DataSource
@@ -32,7 +27,7 @@ object SimpleTarot : KotlinPlugin(
         author("LaoLittle")
     }
 ) {
-    private val path: File = dataFolder.resolve("TarotImages")
+
     private val userDB: Database.User
     private val dataSource = DruidDataSource()
     private val db: org.jetbrains.exposed.sql.Database
@@ -43,18 +38,6 @@ object SimpleTarot : KotlinPlugin(
         logger.info { "Plugin loaded" }
 
         GlobalEventChannel.subscribeGroupMessages {
-            val msg: (TarotData.Tarot, User) -> Message = { tarot, target ->
-                TarotConfig.format.replace("%目标%", "[mirai:at:${target.id}]")
-                    .replace("%牌名%", tarot.name).replace(
-                        "%描述%",
-                        if ((0..1).random() == 0) "正位\n${tarot.positive}" else "逆位\n${tarot.negative}"
-                    ).deserializeMiraiCode()
-            }
-            val img: suspend (TarotData.Tarot, Contact) -> Image? = { tarot, contact ->
-                if (path.resolve(tarot.imageName).exists())
-                    path.resolve(tarot.imageName).uploadAsImage(contact)
-                else null
-            }
             finding(Regex("^(?:(.+)张|)塔罗牌")) {
                 val sql: SqlExpressionBuilder.() -> Op<Boolean> = { userDB.id eq sender.id }
                 val tarotNum = when (val value = it.groups[1]?.value) {
@@ -70,7 +53,7 @@ object SimpleTarot : KotlinPlugin(
                     "十", "拾" -> 10
                     else -> value.toIntOrNull() ?: return@finding
                 }
-                if (tarotNum !in 1..10){
+                if (tarotNum !in 1..10) {
                     subject.sendMessage("次数请限制在一到十内！")
                     return@finding
                 }
@@ -91,26 +74,37 @@ object SimpleTarot : KotlinPlugin(
                 }
                 when (la) {
                     null -> {
-                        subject.sendMessage("请发送\"今日塔罗\"来获取塔罗牌次数");return@finding
+                        subject.sendMessage("请发送\"今日塔罗\"来获取塔罗牌次数")
+                        return@finding
                     }
                     false -> return@finding
                     true -> delay(500)
                 }
-                    if (tarotNum == 1) {
-                        val card = tarot.random()
-                        subject.sendMessage(msg(card, sender))
-                        delay(TarotConfig.interval)
-                        img(card, subject)?.let { img -> subject.sendMessage(img) }
-                    } else {
-                        val tarots = getRandomTarots(tarotNum)
-                        val forward = buildForwardMessage {
-                            tarots.forEach { tarot ->
-                                add(sender, msg(tarot, sender))
-                                img(tarot, subject)?.let { img -> add(sender, img) }
+                if (tarotNum == 1) {
+                    val card = tarot.random()
+                    val thisTarot = GetTarot(card, sender)
+                    subject.sendMessage(thisTarot.tarotMessage)
+                    delay(TarotConfig.interval)
+                    thisTarot.tarotImage?.let { imgResource -> imgResource.use { resource -> subject.sendImage(resource) } }
+
+                } else {
+                    val tarots = getRandomTarots(tarotNum)
+                    val forward = buildForwardMessage {
+                        tarots.forEach { tarotIt ->
+                            val thisTarot = GetTarot(tarotIt, sender)
+                            add(sender, thisTarot.tarotMessage)
+                            thisTarot.tarotImage?.let { imgResource ->
+                                imgResource.use { resource ->
+                                    add(
+                                        sender,
+                                        resource.uploadAsImage(subject)
+                                    )
+                                }
                             }
                         }
-                        subject.sendMessage(forward)
                     }
+                    subject.sendMessage(forward)
+                }
             }
             startsWith("今日塔罗") {
                 val sql: SqlExpressionBuilder.() -> Op<Boolean> = { userDB.id eq sender.id }
@@ -135,9 +129,10 @@ object SimpleTarot : KotlinPlugin(
                         }
                     }
                     val card = tarot.random()
-                    subject.sendMessage(msg(card, sender))
+                    val thisTarot = GetTarot(card, sender)
+                    subject.sendMessage(thisTarot.tarotMessage)
                     delay(TarotConfig.interval)
-                    img(card, subject)?.let { img -> subject.sendMessage(img) }
+                    thisTarot.tarotImage?.let { imgResource -> imgResource.use { resource -> subject.sendImage(resource) } }
                     subject.sendMessage("获得$random 张塔罗牌")
                 }
             }
