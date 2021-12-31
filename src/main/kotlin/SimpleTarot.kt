@@ -27,7 +27,7 @@ object SimpleTarot : KotlinPlugin(
     JvmPluginDescription(
         id = "org.laolittle.plugin.Tarot",
         name = "Tarot",
-        version = "1.0.1",
+        version = "1.0.2",
     ) {
         author("LaoLittle")
     }
@@ -70,7 +70,11 @@ object SimpleTarot : KotlinPlugin(
                     "十", "拾" -> 10
                     else -> value.toIntOrNull() ?: return@finding
                 }
-                val la = Database.suspendTransaction {
+                if (tarotNum !in 1..10){
+                    subject.sendMessage("次数请限制在一到十内！")
+                    return@finding
+                }
+                val la = Database.suspendTransaction(db) {
                     val cardRow = userDB.select(sql).singleOrNull() ?: return@suspendTransaction null
                     val cards = cardRow[userDB.card]
                     if (cardRow[userDB.card] >= tarotNum)
@@ -79,7 +83,7 @@ object SimpleTarot : KotlinPlugin(
                         } else {
                         if (cards == 0) subject.sendMessage("你没有抽数了")
                         else subject.sendMessage("你只有${cardRow[userDB.card]}张")
-                        if (cardRow[userDB.date] == LocalDate.now().dayOfYear)
+                        if (cardRow[userDB.date] != LocalDate.now().dayOfYear)
                             subject.sendMessage("你的今日塔罗貌似没有抽取呢，请发送\"今日塔罗\"来获取塔罗牌次数")
                         return@suspendTransaction false
                     }
@@ -92,7 +96,6 @@ object SimpleTarot : KotlinPlugin(
                     false -> return@finding
                     true -> delay(500)
                 }
-                if (tarotNum in 1..10) {
                     if (tarotNum == 1) {
                         val card = tarot.random()
                         subject.sendMessage(msg(card, sender))
@@ -108,16 +111,12 @@ object SimpleTarot : KotlinPlugin(
                         }
                         subject.sendMessage(forward)
                     }
-                } else {
-                    subject.sendMessage("次数请限制在一到十内！")
-                }
             }
             startsWith("今日塔罗") {
                 val sql: SqlExpressionBuilder.() -> Op<Boolean> = { userDB.id eq sender.id }
                 val dayOfYear = LocalDate.now().dayOfYear
-                Database.suspendTransaction {
-                    val query = userDB.select(sql)
-                    val user = query.singleOrNull()
+                Database.suspendTransaction(db) {
+                    val user = userDB.select(sql).singleOrNull()
                     if (user?.get(userDB.date) == dayOfYear) {
                         subject.sendMessage("你已经拿过一张今日塔罗了哦！")
                         return@suspendTransaction
@@ -165,7 +164,7 @@ object SimpleTarot : KotlinPlugin(
         TransactionManager.manager.defaultIsolationLevel =
             Connection.TRANSACTION_SERIALIZABLE
         userDB = Database.User
-        transaction {
+        transaction(db) {
             SchemaUtils.create(userDB)
         }
     }
