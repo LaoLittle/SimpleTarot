@@ -19,4 +19,7 @@ object TarotConfig : AutoSavePluginConfig("Config") {
 
     @ValueDescription("逆位翻转图像")
     val rotate by value(true)
+
+    @ValueDescription("合并塔罗牌信息和图片")
+    val combine by value(false)
 }

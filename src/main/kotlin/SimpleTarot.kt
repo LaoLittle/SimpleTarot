@@ -7,6 +7,7 @@ import net.mamoe.mirai.console.plugin.jvm.KotlinPlugin
 import net.mamoe.mirai.contact.Contact.Companion.sendImage
 import net.mamoe.mirai.event.GlobalEventChannel
 import net.mamoe.mirai.event.subscribeGroupMessages
+import net.mamoe.mirai.message.data.PlainText
 import net.mamoe.mirai.message.data.buildForwardMessage
 import net.mamoe.mirai.utils.ExternalResource.Companion.uploadAsImage
 import net.mamoe.mirai.utils.info
@@ -22,7 +23,7 @@ object SimpleTarot : KotlinPlugin(
     JvmPluginDescription(
         id = "org.laolittle.plugin.Tarot",
         name = "Tarot",
-        version = "1.0.3",
+        version = "1.0.4",
     ) {
         author("LaoLittle")
     }
@@ -83,22 +84,45 @@ object SimpleTarot : KotlinPlugin(
                 if (tarotNum == 1) {
                     val card = tarot.random()
                     val thisTarot = GetTarot(card, sender)
-                    subject.sendMessage(thisTarot.tarotMessage)
-                    delay(TarotConfig.interval)
-                    thisTarot.tarotImage?.let { imgResource -> imgResource.use { resource -> subject.sendImage(resource) } }
-
+                    if (TarotConfig.combine) {
+                        val msg = thisTarot.tarotMessage.plus(thisTarot.tarotImage?.let { imgResource ->
+                            imgResource.use { resource ->
+                                subject.uploadImage(resource)
+                            }
+                        } ?: PlainText(""))
+                        subject.sendMessage(msg)
+                    } else {
+                        subject.sendMessage(thisTarot.tarotMessage)
+                        delay(TarotConfig.interval)
+                        thisTarot.tarotImage?.let { imgResource ->
+                            imgResource.use { resource ->
+                                subject.sendImage(
+                                    resource
+                                )
+                            }
+                        }
+                    }
                 } else {
                     val tarots = getRandomTarots(tarotNum)
                     val forward = buildForwardMessage {
                         tarots.forEach { tarotIt ->
                             val thisTarot = GetTarot(tarotIt, sender)
-                            add(sender, thisTarot.tarotMessage)
-                            thisTarot.tarotImage?.let { imgResource ->
-                                imgResource.use { resource ->
-                                    add(
-                                        sender,
-                                        resource.uploadAsImage(subject)
-                                    )
+                            if (TarotConfig.combine) {
+                                val msg = thisTarot.tarotMessage.plus(thisTarot.tarotImage?.let { imgResource ->
+                                    imgResource.use { resource ->
+                                        subject.uploadImage(resource)
+                                    }
+                                } ?: PlainText(""))
+                                add(sender, msg)
+                            } else {
+                                add(sender, thisTarot.tarotMessage)
+                                thisTarot.tarotImage?.let { imgResource ->
+                                    imgResource.use { resource ->
+                                        add(
+                                            sender,
+                                            resource.uploadAsImage(subject)
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -130,9 +154,24 @@ object SimpleTarot : KotlinPlugin(
                     }
                     val card = tarot.random()
                     val thisTarot = GetTarot(card, sender)
-                    subject.sendMessage(thisTarot.tarotMessage)
-                    delay(TarotConfig.interval)
-                    thisTarot.tarotImage?.let { imgResource -> imgResource.use { resource -> subject.sendImage(resource) } }
+                    if (TarotConfig.combine) {
+                        val msg = thisTarot.tarotMessage.plus(thisTarot.tarotImage?.let { imgResource ->
+                            imgResource.use { resource ->
+                                subject.uploadImage(resource)
+                            }
+                        } ?: PlainText(""))
+                        subject.sendMessage(msg)
+                    } else {
+                        subject.sendMessage(thisTarot.tarotMessage)
+                        delay(TarotConfig.interval)
+                        thisTarot.tarotImage?.let { imgResource ->
+                            imgResource.use { resource ->
+                                subject.sendImage(
+                                    resource
+                                )
+                            }
+                        }
+                    }
                     subject.sendMessage("获得$random 张塔罗牌")
                 }
             }
