@@ -16,4 +16,7 @@ object TarotConfig : AutoSavePluginConfig("Config") {
 
     @ValueDescription("连抽可重复")
     val repeatable by value(true)
+
+    @ValueDescription("逆位翻转图像")
+    val rotate by value(true)
 }

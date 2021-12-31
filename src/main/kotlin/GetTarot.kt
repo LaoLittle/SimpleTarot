@@ -27,10 +27,10 @@ class GetTarot(
         get() {
             val imgFile = path.resolve(tarot.imageName)
             return if (imgFile.exists()) {
-                if (random == 1)
-                    imgFile.rotateImage()
-                else
+                if (random == 0 || !TarotConfig.rotate)
                     imgFile.toExternalResource()
+                else
+                    imgFile.rotateImage()
             } else null
         }
 }

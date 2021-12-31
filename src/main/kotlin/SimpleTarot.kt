@@ -22,7 +22,7 @@ object SimpleTarot : KotlinPlugin(
     JvmPluginDescription(
         id = "org.laolittle.plugin.Tarot",
         name = "Tarot",
-        version = "1.0.2",
+        version = "1.0.3",
     ) {
         author("LaoLittle")
     }
@@ -116,16 +116,16 @@ object SimpleTarot : KotlinPlugin(
                         return@suspendTransaction
                     }
                     val random = (10..30).random()
-                    if (user == null)
+                    if (user != null)
+                        userDB.update(sql) { info ->
+                            info[card] = user[card] + random
+                            info[date] = dayOfYear
+                        }
+                    else {
                         userDB.insert { usr ->
                             usr[id] = sender.id
                             usr[card] = random
                             usr[date] = dayOfYear
-                        }
-                    else {
-                        userDB.update(sql) { info ->
-                            info[card] = 1
-                            info[date] = dayOfYear
                         }
                     }
                     val card = tarot.random()
@@ -137,7 +137,6 @@ object SimpleTarot : KotlinPlugin(
                 }
             }
             startsWith("查看塔罗") {
-
             }
         }
 
