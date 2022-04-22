@@ -28,7 +28,6 @@ object SimpleTarot : KotlinPlugin(
         author("LaoLittle")
     }
 ) {
-
     private val userDB: Database.User
     private val dataSource = DruidDataSource()
     private val db: org.jetbrains.exposed.sql.Database
